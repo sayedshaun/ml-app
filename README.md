@@ -1,1 +1,1 @@
-# Fullstack Machine Learning with FastAPI and Litserve
+# An Application of Machine Learning
