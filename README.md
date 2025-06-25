@@ -1,1 +1,1 @@
-# Machine Learning Craft
+# Fullstack Machine Learning with FastAPI and Litserve
