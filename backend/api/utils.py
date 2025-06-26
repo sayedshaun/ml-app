@@ -11,6 +11,7 @@ from db import SessionLocal
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from passlib.context import CryptContext
+from fastapi import Cookie, Header
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -63,38 +64,48 @@ def email_authentication(email: Email, session: Session) -> User:
     return user
     
 def get_current_user(
-        token: str = Depends(oauth2_scheme),
-        session: Session = Depends(start_session)
+    access_token: str = Cookie(None),
+    session: Session = Depends(start_session)
     ) -> User:
+    raw_token = access_token
+    if raw_token is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    scheme, _, token = raw_token.partition(" ")
+    if scheme.lower() != "bearer":
+        token = raw_token
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
-        if email is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, 
-                detail="Invalid token",
-                headers={"WWW-Authenticate": "Bearer"}
-            )
+        if not email:
+            raise ValueError()
     except ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired, please login again",
-            headers={"WWW-Authenticate": "Bearer"}
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    except JWTError:
+    except (JWTError, ValueError):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Session expired, please login again",
-            headers={"WWW-Authenticate": "Bearer"}
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         )
+
     user = session.query(User).filter(User.email == email).first()
-    if user is None:
+    if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Invalid token",
-            headers={"WWW-Authenticate": "Bearer"}
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     return user
+
 
 def create_otp(email: str, session: Session = Depends(start_session)) -> str:
     #otp = random.randint(10000, 99999)

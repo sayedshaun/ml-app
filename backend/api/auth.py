@@ -1,10 +1,9 @@
 from datetime import datetime
 from typing import Dict, Optional, Union, Any, List
-from fastapi import APIRouter, HTTPException, Body, Depends, status
+from fastapi import APIRouter, HTTPException, Body, Depends, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from models import User, OtpStore
 from schema.input import OTPVerify, ResetPassword, UpdatePassword, Register
-from api.utils import get_current_user, start_session, hash_password
 from schema.input import Password, Email
 from schema.output import AccessToken, AccessToken, JsonResponse
 from sqlalchemy.orm import Session
@@ -13,19 +12,34 @@ from api.utils import (
     authenticate_user, 
     create_otp, 
     send_email_otp, 
-    email_authentication
+    email_authentication,
+    start_session,
+    hash_password,
+    get_current_user
 )
 
 router = APIRouter()
 
 @router.post("/login", response_model=AccessToken)
 def login(
+    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: Session = Depends(start_session)
-    ) -> AccessToken:
+) -> AccessToken:
     user = authenticate_user(form_data.username, form_data.password, session)
-    access_token = create_access_token(data={"sub": user.email})
-    return AccessToken(access_token=access_token, token_type="bearer")
+    token = create_access_token(data={"sub": user.email})
+
+    # Set a cookie that lives for 7 days (604800 seconds)
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {token}",
+        httponly=True,
+        max_age=604800,           # seconds
+        expires=604800,           # seconds
+        secure=True,              # only send over HTTPS
+        samesite="lax",           # adjust according to your needs
+    )
+    return AccessToken(access_token=token, token_type="bearer")
 
 @router.post("/register", response_model=JsonResponse)
 def register(
@@ -129,13 +143,13 @@ def reset_password(
     session.commit()
     return {"message": "Password reset successfully"}
 
-@router.put("/simple_reset_password", response_model=JsonResponse)
-def simple_reset_password(
-    data: ResetPassword = Body(...),
-    user: User = Depends(email_authentication),
-    session: Session = Depends(start_session)
-    ) -> dict:
-    user = email_authentication(data.email, session)
-    user.hashed_password = hash_password(data.new_password)
-    session.commit()
-    return {"message": "Password reset successfully"}
+# @router.put("/simple_reset_password", response_model=JsonResponse)
+# def simple_reset_password(
+#     data: ResetPassword = Body(...),
+#     user: User = Depends(email_authentication),
+#     session: Session = Depends(start_session)
+#     ) -> dict:
+#     user = email_authentication(data.email, session)
+#     user.hashed_password = hash_password(data.new_password)
+#     session.commit()
+#     return {"message": "Password reset successfully"}
