@@ -1,4 +1,6 @@
-from datetime import datetime
+import os
+from dotenv import load_dotenv
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Union, Any, List
 from fastapi import APIRouter, HTTPException, Body, Depends, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -18,6 +20,8 @@ from api.utils import (
     get_current_user
 )
 
+load_dotenv()
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
 router = APIRouter()
 
 @router.post("/login", response_model=AccessToken)
@@ -25,21 +29,25 @@ def login(
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: Session = Depends(start_session)
-) -> AccessToken:
+    ) -> AccessToken:
     user = authenticate_user(form_data.username, form_data.password, session)
     token = create_access_token(data={"sub": user.email})
 
-    # Set a cookie that lives for 7 days (604800 seconds)
     response.set_cookie(
         key="access_token",
         value=f"Bearer {token}",
         httponly=True,
-        max_age=604800,           # seconds
-        expires=604800,           # seconds
-        secure=True,              # only send over HTTPS
-        samesite="lax",           # adjust according to your needs
+        max_age= ACCESS_TOKEN_EXPIRE_MINUTES * 60,      
+        expires= datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),   
+        secure=True,          
+        samesite="lax",      
     )
     return AccessToken(access_token=token, token_type="bearer")
+
+@router.post("/logout", response_model=JsonResponse)
+def logout(response: Response) -> JsonResponse:
+    response.delete_cookie("access_token")
+    return JsonResponse(message="Logout successful")
 
 @router.post("/register", response_model=JsonResponse)
 def register(
@@ -98,7 +106,7 @@ def send_otp_to_email(
             )
     otp = create_otp(email.email, session)
     send_email_otp(email.email, otp)
-    return JsonResponse(message="OTP sent successfully")
+    return JsonResponse(message=f"OTP sent successfully {otp}")
 
 
 @router.post("/verify_otp", response_model=JsonResponse)
@@ -144,16 +152,3 @@ def reset_password(
     session.delete(otp_record)
     session.commit()
     return JsonResponse(message="Password reset successfully")
-
-
-
-# @router.put("/simple_reset_password", response_model=JsonResponse)
-# def simple_reset_password(
-#     data: ResetPassword = Body(...),
-#     user: User = Depends(email_authentication),
-#     session: Session = Depends(start_session)
-#     ) -> dict:
-#     user = email_authentication(data.email, session)
-#     user.hashed_password = hash_password(data.new_password)
-#     session.commit()
-#     return JsonResponse(message="Password reset successfully")

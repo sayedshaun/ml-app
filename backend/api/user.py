@@ -10,21 +10,15 @@ from sqlalchemy.orm import Session
 router = APIRouter()
 
 @router.get("/user_info")
-def user_info(
-    user: User = Depends(get_current_user),
-    session: Session = Depends(start_session)
-    ) -> UserInfo:
+def user_info(user: User = Depends(get_current_user)) -> UserInfo:
     return UserInfo(
         joined=user.create_time,
         username=user.username,
         email=user.email
     )
 
-@router.get("/prediction_history", response_model=UserHistory)
-def prediction_history(
-    user: User = Depends(get_current_user),
-    session: Session = Depends(start_session)
-    ) -> UserHistory:
+@router.get("/user_prediction_history", response_model=UserHistory)
+def user_prediction_history(user: User = Depends(get_current_user)) -> UserHistory:
     return UserHistory(
         user_id=user.id,
         username=user.username,
