@@ -21,7 +21,7 @@ Active virtual environment and install requirements
 pip install -r requirements.txt
 ```
 
-# Usage
+## Usage
 
 Create `.env` file and store all of the bellow information
 ```bash
