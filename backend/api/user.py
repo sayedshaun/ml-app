@@ -25,7 +25,7 @@ def prediction_history(
     user: User = Depends(get_current_user),
     session: Session = Depends(start_session)
     ) -> UserHistory:
-    history =  UserHistory(
+    return UserHistory(
         user_id=user.id,
         username=user.username,
         chats=[
@@ -38,7 +38,6 @@ def prediction_history(
             for chat in user.predictions
         ]
     )
-    return history
   
 @router.put("/update_username", response_model=JsonResponse)
 def update_username(
@@ -58,7 +57,8 @@ def update_username(
         User.id == user.id).update({"username": username.username}
     )
     session.commit()
-    return {"message": "Username updated successfully"}
+    return JsonResponse(message="Username updated successfully")
+
 
 
 @router.delete("/delete_prediction/{id}", response_model=JsonResponse)
@@ -76,6 +76,6 @@ def delete_prediction(
             )
     session.delete(chat)
     session.commit()
-    return {"message": "Chat deleted successfully"}
+    return JsonResponse(message="Chat deleted successfully")
         
    

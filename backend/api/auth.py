@@ -65,7 +65,7 @@ def register(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=f"Database error: {str(e)}"
             )
-    return {"message": "Account created successfully"}
+    return JsonResponse(message="Account created successfully")
 
 @router.put("/update_email", response_model=JsonResponse)
 def update_email(
@@ -83,7 +83,7 @@ def update_email(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=f"Database error: {str(e)}"
             )
-    return {"message": "Email updated successfully"}
+    return JsonResponse(message="Email updated successfully")
 
 @router.put("/send_otp_to_email", response_model=JsonResponse)
 def send_otp_to_email(
@@ -98,7 +98,8 @@ def send_otp_to_email(
             )
     otp = create_otp(email.email, session)
     send_email_otp(email.email, otp)
-    return {"message": f"OTP sent to email {otp}"}
+    return JsonResponse(message="OTP sent successfully")
+
 
 @router.post("/verify_otp", response_model=JsonResponse)
 def verify_otp(
@@ -121,7 +122,8 @@ def verify_otp(
         )
     otp_store.is_verified = True
     session.commit()
-    return {"message": "OTP verified successfully"}
+    return JsonResponse(message="OTP verified successfully")
+
 
 @router.put("/reset_password", response_model=JsonResponse)
 def reset_password(
@@ -141,7 +143,9 @@ def reset_password(
     user.hashed_password = hash_password(data.new_password)
     session.delete(otp_record)
     session.commit()
-    return {"message": "Password reset successfully"}
+    return JsonResponse(message="Password reset successfully")
+
+
 
 # @router.put("/simple_reset_password", response_model=JsonResponse)
 # def simple_reset_password(
@@ -152,4 +156,4 @@ def reset_password(
 #     user = email_authentication(data.email, session)
 #     user.hashed_password = hash_password(data.new_password)
 #     session.commit()
-#     return {"message": "Password reset successfully"}
+#     return JsonResponse(message="Password reset successfully")

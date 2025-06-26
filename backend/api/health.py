@@ -7,9 +7,9 @@ router = APIRouter()
 
 @router.get("/", status_code=status.HTTP_200_OK, response_model=JsonResponse)
 def root() -> str:
-   return {"message": "running"}
+   return JsonResponse(message="ok")
 
 @router.get("/healthcheck", status_code=status.HTTP_200_OK, response_model=JsonResponse)
 def health_check() -> JsonResponse:
-   return {"message": "ok"}
+   return JsonResponse(message="ok")
 
