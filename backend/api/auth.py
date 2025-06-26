@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Union, Any, List
 from fastapi import APIRouter, HTTPException, Body, Depends, Response, status
+from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from models import User, OtpStore
 from schema.input import OTPVerify, ResetPassword, UpdatePassword, Register
@@ -44,10 +45,11 @@ def login(
     )
     return AccessToken(access_token=token, token_type="bearer")
 
-@router.post("/logout", response_model=JsonResponse)
-def logout(response: Response) -> JsonResponse:
+@router.get("/logout")
+def logout(user = Depends(get_current_user)):
+    response = JSONResponse(content={"message": "Logout successful"})
     response.delete_cookie("access_token")
-    return JsonResponse(message="Logout successful")
+    return response
 
 @router.post("/register", response_model=JsonResponse)
 def register(
